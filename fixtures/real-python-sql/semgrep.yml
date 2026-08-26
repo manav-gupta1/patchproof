@@ -1,0 +1,10 @@
+rules:
+  - id: python.sql-string-format
+    languages: [python]
+    message: User input is interpolated into a SQL query.
+    severity: ERROR
+    patterns:
+      - pattern: $CONN.execute($QUERY)
+      - pattern-inside: |
+          def lookup_user(...):
+            ...

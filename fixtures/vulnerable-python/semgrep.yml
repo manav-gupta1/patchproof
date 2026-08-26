@@ -1,0 +1,10 @@
+rules:
+  - id: patchproof.sql-concat
+    languages: [python]
+    message: "SQL query built with string concatenation"
+    severity: ERROR
+    patterns:
+      - pattern: $DB.execute($QUERY)
+      - metavariable-pattern:
+          metavariable: $QUERY
+          pattern: $A + $B

@@ -1,0 +1,10 @@
+rules:
+  - id: patchproof.python.sql-injection
+    languages: [python]
+    message: User-controlled SQL concatenation
+    severity: ERROR
+    patterns:
+      - pattern: $CONN.execute($QUERY)
+      - metavariable-pattern:
+          metavariable: $QUERY
+          pattern: $X + $Y

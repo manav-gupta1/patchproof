@@ -1,0 +1,95 @@
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-patchproof}
+      POSTGRES_USER: ${POSTGRES_USER:-patchproof}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-patchproof_dev_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports: ["5432:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+  api:
+    build: .
+    restart: unless-stopped
+    environment:
+      PATCHPROOF_ENVIRONMENT: ${PATCHPROOF_ENVIRONMENT:-development}
+      PATCHPROOF_DATABASE_URL: ${PATCHPROOF_DATABASE_URL:-postgresql+psycopg://patchproof:${POSTGRES_PASSWORD:-patchproof_dev_password}@postgres:5432/patchproof}
+      PATCHPROOF_REDIS_URL: ${PATCHPROOF_REDIS_URL:-redis://redis:6379/0}
+      GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET:-development-secret}
+      PATCHPROOF_API_KEY: ${PATCHPROOF_API_KEY:-patchproof_dev_api_key}
+      PATCHPROOF_API_KEYS: ${PATCHPROOF_API_KEYS:-}
+      PATCHPROOF_AUTH_ENABLED: ${PATCHPROOF_AUTH_ENABLED:-true}
+      PATCHPROOF_CORS_ORIGINS: ${PATCHPROOF_CORS_ORIGINS:-*}
+      GITHUB_APP_ID: ${GITHUB_APP_ID:-}
+      GITHUB_APP_PRIVATE_KEY: ${GITHUB_APP_PRIVATE_KEY:-}
+      GITHUB_APP_PRIVATE_KEY_PATH: ${GITHUB_APP_PRIVATE_KEY_PATH:-}
+      GITHUB_INSTALLATION_ID: ${GITHUB_INSTALLATION_ID:-}
+      GITHUB_API_URL: ${GITHUB_API_URL:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports: ["8000:8000"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  worker:
+    build: .
+    restart: unless-stopped
+    command: ["celery", "-A", "packages.jobs.celery_app:celery_app", "worker", "--loglevel=INFO"]
+    environment:
+      PATCHPROOF_ENVIRONMENT: ${PATCHPROOF_ENVIRONMENT:-development}
+      PATCHPROOF_DATABASE_URL: ${PATCHPROOF_DATABASE_URL:-postgresql+psycopg://patchproof:${POSTGRES_PASSWORD:-patchproof_dev_password}@postgres:5432/patchproof}
+      PATCHPROOF_REDIS_URL: ${PATCHPROOF_REDIS_URL:-redis://redis:6379/0}
+      GITHUB_APP_ID: ${GITHUB_APP_ID:-}
+      GITHUB_APP_PRIVATE_KEY: ${GITHUB_APP_PRIVATE_KEY:-}
+      GITHUB_APP_PRIVATE_KEY_PATH: ${GITHUB_APP_PRIVATE_KEY_PATH:-}
+      GITHUB_INSTALLATION_ID: ${GITHUB_INSTALLATION_ID:-}
+      GITHUB_API_URL: ${GITHUB_API_URL:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  gui:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      INTERNAL_API_URL: ${INTERNAL_API_URL:-http://api:8000}
+      PATCHPROOF_API_KEY: ${PATCHPROOF_API_KEY:-patchproof_dev_api_key}
+    ports: ["3000:3000"]
+    depends_on:
+      api:
+        condition: service_started
+
+volumes:
+  postgres_data:
+  redis_data:
+

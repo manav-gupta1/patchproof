@@ -1,0 +1,10 @@
+rules:
+  - id: patchproof.python.sql-string-interpolation
+    languages: [python]
+    severity: ERROR
+    message: User-controlled input is interpolated into SQL execution.
+    patterns:
+      - pattern: $DB.execute($QUERY)
+      - metavariable-pattern:
+          metavariable: $QUERY
+          pattern: f"..."

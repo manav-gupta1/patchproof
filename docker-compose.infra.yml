@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: patchproof
+      POSTGRES_USER: patchproof
+      POSTGRES_PASSWORD: patchproof_dev_only
+    ports:
+      - "5432:5432"
+    volumes:
+      - patchproof_pg:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  worker:
+    build: .
+    command: celery -A packages.jobs.celery_app:celery_app worker --loglevel=INFO
+    environment:
+      PATCHPROOF_REDIS_URL: redis://redis:6379/0
+      PATCHPROOF_DATABASE_URL: postgresql+psycopg://patchproof:patchproof_dev_only@postgres:5432/patchproof
+    depends_on:
+      - postgres
+      - redis
+
+volumes:
+  patchproof_pg:
