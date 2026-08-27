@@ -67,12 +67,57 @@ body {
   }
 }
 
+/* ── HERO ENTRANCE ANIMATIONS ── */
+
+@keyframes heroSlideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes heroFadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes chamberFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .animate-pulse-subtle {
   animation: pulseSubtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 .animate-terminal-cursor {
   animation: cursorBlink 1.1s steps(2, start) infinite;
+}
+
+.animate-hero-slide-up {
+  animation: heroSlideUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-hero-fade-in {
+  animation: heroFadeIn 0.6s ease both;
+}
+
+.animate-chamber-fade-in {
+  animation: chamberFadeIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 /* Accessible reduced motion override */

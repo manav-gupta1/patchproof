@@ -1,8 +1,24 @@
 import React from "react";
 import type { Metadata } from "next";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ArrowRight, ShieldCheck } from "lucide-react";
 import { InteractiveDemo } from "@/components/marketing/InteractiveDemo";
+
+const Pipeline3DPreview = dynamic(
+  () =>
+    import("@/components/marketing/Pipeline3DPreview").then(
+      (mod) => mod.Pipeline3DPreview
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full rounded-md border border-border-subtle bg-zinc-950/80 min-h-[220px] flex items-center justify-center font-mono text-xs text-zinc-500">
+        <span>Loading 3D Pipeline Transit...</span>
+      </div>
+    ),
+  }
+);
 
 export const metadata: Metadata = {
   title: "How It Works | PatchProof Architecture",
@@ -75,6 +91,14 @@ export default function HowItWorksPage() {
         <p className="text-zinc-400 text-sm sm:text-base font-sans leading-relaxed">
           AI writes the patch. PatchProof verifies it. Every patch must pass isolated gVisor sandbox execution, regression test suites, and Ed25519 cryptographic sealing before any remote write is authorized.
         </p>
+      </div>
+
+      {/* 3D Execution Pipeline Visualizer */}
+      <div className="space-y-3">
+        <div className="text-[11px] font-mono text-emerald-400 uppercase tracking-wider font-semibold">
+          Execution Lifecycle Transit
+        </div>
+        <Pipeline3DPreview />
       </div>
 
       {/* Architecture Dataflow Spec */}

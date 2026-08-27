@@ -185,32 +185,32 @@ export function LiveConsoleSection() {
   }, [jobs, activeFilter]);
 
   return (
-    <section id="console" className="max-w-6xl mx-auto px-4 sm:px-6 py-24 border-t border-border-muted">
+    <section id="console" className="max-w-[1520px] mx-auto px-4 sm:px-8 lg:px-12 py-28 lg:py-40 border-t border-border-muted">
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
-      <div className="space-y-8 font-mono text-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="text-[11px] font-mono text-emerald-400 uppercase tracking-wider font-semibold">
+      <div className="space-y-10 font-mono text-xs sm:text-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="text-xs sm:text-sm font-mono text-emerald-400 uppercase tracking-wider font-bold">
               Live Operations Telemetry
             </div>
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-100 font-sans">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-zinc-100 font-sans leading-tight">
               Security Remediation Console
             </h2>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button
               onClick={loadDashboardData}
-              className="px-2.5 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-border-subtle text-zinc-300 hover:text-white text-xs font-mono inline-flex items-center gap-1.5 transition-colors focus-visible:ring-1 focus-visible:ring-zinc-400 focus-visible:outline-none"
+              className="px-3.5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-border-subtle text-zinc-300 hover:text-white text-xs sm:text-sm font-mono inline-flex items-center gap-2 transition-colors focus-visible:ring-1 focus-visible:ring-zinc-400 focus-visible:outline-none"
               title="Refresh live telemetry"
             >
-              <RefreshCw className="w-3 h-3" /> Refresh
+              <RefreshCw className="w-3.5 h-3.5" /> Refresh
             </button>
             <Link
               href="/jobs"
-              className="px-3 py-1.5 rounded bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-mono font-semibold transition-colors inline-flex items-center gap-1 shadow-sm focus-visible:ring-1 focus-visible:ring-zinc-400 focus-visible:outline-none"
+              className="px-4 py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs sm:text-sm font-sans font-semibold transition-colors inline-flex items-center gap-1.5 shadow-sm focus-visible:ring-1 focus-visible:ring-zinc-400 focus-visible:outline-none"
             >
-              Full Remediations Explorer <ArrowRight className="w-3 h-3" />
+              Full Remediations Explorer <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
         </div>

@@ -62,38 +62,38 @@ export function InteractiveDemo() {
 
   return (
     <div
-      className="border border-border-muted bg-surface-300 rounded-md overflow-hidden shadow-2xl font-mono text-xs select-none"
+      className="border border-border-muted bg-surface-300 rounded-xl overflow-hidden shadow-2xl font-mono text-sm select-none"
       data-testid="interactive-demo"
     >
       {/* ── TOP CONTROL BAR ── */}
-      <div className="px-4 py-3 bg-surface-400 border-b border-border-subtle flex flex-wrap items-center justify-between gap-3">
+      <div className="px-6 py-4 bg-surface-400 border-b border-border-subtle flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
             <span className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
             <span className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
           </div>
-          <span className="text-zinc-400 text-[11px]">
-            engine-simulation // <strong className="text-zinc-200">octocat/auth-service</strong> · security-gate-eval
+          <span className="text-zinc-300 text-xs sm:text-sm">
+            engine-simulation // <strong className="text-zinc-100">octocat/auth-service</strong> · security-gate-eval
           </span>
         </div>
 
         {/* Scenario Toggle */}
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] text-zinc-500 hidden sm:inline">Scenario:</span>
-          <div className="inline-flex p-0.5 rounded bg-zinc-900 border border-zinc-800">
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-zinc-400 hidden sm:inline">Scenario:</span>
+          <div className="inline-flex p-1 rounded-lg bg-zinc-900 border border-zinc-800 text-xs">
             <button
               onClick={() => {
                 setScenario("unsafe");
                 setActiveStage("diff");
               }}
-              className={`px-2.5 py-1 rounded text-[11px] transition-all duration-150 flex items-center gap-1.5 ${
+              className={`px-3.5 py-1.5 rounded-md transition-all duration-150 flex items-center gap-2 font-semibold ${
                 scenario === "unsafe"
-                  ? "bg-rose-950/80 text-rose-300 font-semibold border border-rose-800/80 shadow-sm ring-1 ring-rose-500/20"
+                  ? "bg-rose-950/90 text-rose-300 font-bold border border-rose-800 shadow-sm ring-1 ring-rose-500/20"
                   : "text-zinc-400 hover:text-zinc-200"
               }`}
             >
-              <ShieldAlert className="w-3 h-3 text-rose-400" />
+              <ShieldAlert className="w-4 h-4 text-rose-400" />
               Unsafe Patch (Rejected)
             </button>
 
@@ -102,13 +102,13 @@ export function InteractiveDemo() {
                 setScenario("safe");
                 setActiveStage("diff");
               }}
-              className={`px-2.5 py-1 rounded text-[11px] transition-all duration-150 flex items-center gap-1.5 ${
+              className={`px-3.5 py-1.5 rounded-md transition-all duration-150 flex items-center gap-2 font-semibold ${
                 scenario === "safe"
-                  ? "bg-emerald-950/80 text-emerald-300 font-semibold border border-emerald-800/80 shadow-sm ring-1 ring-emerald-500/20"
+                  ? "bg-emerald-950/90 text-emerald-300 font-bold border border-emerald-800 shadow-sm ring-1 ring-emerald-500/20"
                   : "text-zinc-400 hover:text-zinc-200"
               }`}
             >
-              <ShieldCheck className="w-3 h-3 text-emerald-400" />
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
               Safe Patch (Authorized)
             </button>
           </div>
@@ -117,8 +117,9 @@ export function InteractiveDemo() {
 
       {/* ── STAGE PIPELINE TABS ── */}
       <div
-        className="bg-surface-400/80 px-3 py-2 border-b border-border-subtle flex items-center gap-1 overflow-x-auto"
+        className="bg-surface-400/80 px-6 py-3 border-b border-border-subtle flex items-center gap-2 overflow-x-auto"
         role="tablist"
+        aria-label="Simulation pipeline stages"
       >
         {stages.map((stage) => {
           const isActive = activeStage === stage.id;
@@ -128,14 +129,16 @@ export function InteractiveDemo() {
               role="tab"
               aria-selected={isActive}
               onClick={() => setActiveStage(stage.id)}
-              className={`px-3 py-1 rounded text-xs transition-all duration-150 flex items-center gap-1.5 whitespace-nowrap ${
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-150 whitespace-nowrap focus-visible:ring-1 focus-visible:ring-zinc-400 focus-visible:outline-none ${
                 isActive
-                  ? "bg-zinc-800 text-zinc-100 font-semibold border border-zinc-700 shadow-sm"
-                  : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50"
+                  ? "bg-zinc-800 text-zinc-100 border border-zinc-700 shadow-sm"
+                  : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40"
               }`}
             >
-              {stage.icon}
-              {stage.label}
+              <span className={isActive ? "text-emerald-400" : "text-zinc-500"}>
+                {stage.icon}
+              </span>
+              <span>{stage.label}</span>
             </button>
           );
         })}
@@ -236,44 +239,41 @@ def get_user_record(user_id: str):
             </div>
 
             {/* Code Diff Display */}
-            <pre className="p-3.5 bg-zinc-950 rounded border border-zinc-800 overflow-x-auto leading-relaxed text-zinc-300 text-[11px]">
+            <pre className="p-5 bg-zinc-950 rounded-lg border border-zinc-800 overflow-x-auto leading-relaxed text-zinc-300 text-xs sm:text-sm font-mono">
               {scenario === "unsafe" ? (
                 <>
                   <div className="text-zinc-500">--- a/app/auth/middleware.py</div>
                   <div className="text-zinc-500">+++ b/app/auth/middleware.py</div>
                   <div className="text-zinc-500">@@ -35,5 +35,4 @@ def authenticate_request(req):</div>
-                  <div className="bg-rose-950/40 text-rose-300 px-1.5 -mx-1.5 rounded-sm">
+                  <div className="bg-rose-950/40 text-rose-300 px-2 -mx-2 rounded">
                     -    if not verify_hmac_signature(token, secret_key):
                   </div>
-                  <div className="bg-rose-950/40 text-rose-300 px-1.5 -mx-1.5 rounded-sm">
-                    -        raise HTTPException(status_code=401, detail=&quot;Invalid signature&quot;)
+                  <div className="bg-rose-950/40 text-rose-300 px-2 -mx-2 rounded">
+                    -        raise HTTPException(status_code=401, detail="Invalid signature")
                   </div>
-                  <div className="bg-emerald-950/40 text-emerald-300 px-1.5 -mx-1.5 rounded-sm">
-                    +    # AI Speculative Error: Weakened authentication check for convenience
+                  <div className="bg-amber-950/40 text-amber-300 px-2 -mx-2 rounded">
+                    +    # SPECULATIVE INSECURE SHORTCUT: Weakens auth boundary
                   </div>
-                  <div className="bg-emerald-950/40 text-emerald-300 px-1.5 -mx-1.5 rounded-sm">
-                    +    if not req.headers.get(&quot;x-user-id&quot;):
+                  <div className="bg-rose-950/40 text-rose-300 px-2 -mx-2 rounded">
+                    +    if req.headers.get("x-bypass") == "1":
                   </div>
-                  <div className="bg-emerald-950/40 text-emerald-300 px-1.5 -mx-1.5 rounded-sm">
-                    +        raise HTTPException(status_code=401, detail=&quot;Missing user header&quot;)
-                  </div>
-                  <div className="text-zinc-400">     return get_user_session(req)</div>
+                  <div className="text-zinc-400">         return parse_jwt_unverified(token)</div>
                 </>
               ) : (
                 <>
                   <div className="text-zinc-500">--- a/app/database.py</div>
                   <div className="text-zinc-500">+++ b/app/database.py</div>
                   <div className="text-zinc-500">@@ -40,4 +40,4 @@ def get_user_record(user_id: str):</div>
-                  <div className="bg-rose-950/40 text-rose-300 px-1.5 -mx-1.5 rounded-sm">
-                    -    query = f&quot;SELECT id, username, email FROM users WHERE id = &apos;{'{'}user_id{'}'}&apos;&quot;
+                  <div className="bg-rose-950/40 text-zinc-300 px-2 -mx-2 rounded">
+                    -    query = f&quot;SELECT id, username, email FROM users WHERE id = &apos;&#123;user_id&#125;&apos;&quot;
                   </div>
-                  <div className="bg-rose-950/40 text-rose-300 px-1.5 -mx-1.5 rounded-sm">
+                  <div className="bg-rose-950/40 text-zinc-300 px-2 -mx-2 rounded">
                     -    return db.execute(query).fetchone()
                   </div>
-                  <div className="bg-emerald-950/40 text-emerald-300 px-1.5 -mx-1.5 rounded-sm">
-                    +    query = &quot;SELECT id, username, email FROM users WHERE id = %s&quot;
+                  <div className="bg-emerald-950/40 text-emerald-300 px-2 -mx-2 rounded">
+                    +    query = "SELECT id, username, email FROM users WHERE id = %s"
                   </div>
-                  <div className="bg-emerald-950/40 text-emerald-300 px-1.5 -mx-1.5 rounded-sm">
+                  <div className="bg-emerald-950/40 text-emerald-300 px-2 -mx-2 rounded">
                     +    return db.execute(query, (user_id,)).fetchone()
                   </div>
                 </>
