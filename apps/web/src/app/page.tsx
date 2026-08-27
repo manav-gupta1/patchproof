@@ -5,8 +5,12 @@ import { HeroSection } from "@/components/marketing/HeroVerificationControlPlane
 import { ZeroUnverifiedWritesSection } from "@/components/marketing/ZeroUnverifiedWritesSection";
 import { ArchitectureDataflowSection } from "@/components/marketing/ArchitectureDataflowSection";
 import { VerificationShowcase } from "@/components/marketing/VerificationShowcase";
+import { SecurityArchitectureSection } from "@/components/marketing/SecurityArchitectureSection";
 import { LiveConsoleSection } from "@/components/dashboard/LiveConsoleSection";
 import { FAQAccordion } from "@/components/marketing/FAQAccordion";
+import { CTASection } from "@/components/marketing/CTASection";
+import { PageEnvironment } from "@/components/background/PageEnvironment";
+import { ScrollProgressRail } from "@/components/background/ScrollProgressRail";
 import { ArrowRight, KeyRound } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -56,27 +60,111 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="text-zinc-200 selection:bg-emerald-950 selection:text-emerald-300">
-      {/* ── 1. HERO — headline + 3D chamber, ~90vh ── */}
+    <div className="relative text-zinc-200 selection:bg-emerald-950 selection:text-emerald-300">
+      {/*
+        ══════════════════════════════════════════════════════
+        BACKGROUND SYSTEM — fixed layers behind all content.
+        PageEnvironment renders: vignette, guide rails, global
+        perspective grid, machine illumination rings,
+        vertical support shaft, and structural depth frames.
+        ══════════════════════════════════════════════════════
+      */}
+      <PageEnvironment />
+      <ScrollProgressRail />
+
+      {/* ══ NOISE TEXTURE — applied to page root ══ */}
+      {/* SVG feTurbulence grain: 2.5% monochromatic noise to break up flat dark surfaces */}
+      <div
+        className="fixed inset-0 pointer-events-none bg-noise"
+        aria-hidden="true"
+        style={{ zIndex: 0 }}
+      />
+
+      {/* ═══════════════════════════════════════════════════
+          1. HERO — machine room environment
+          The 3D chamber is embedded in the large illumination
+          field rendered by PageBackground. The section itself
+          adds the left-side graphite depth field.
+      ═══════════════════════════════════════════════════ */}
       <HeroSection />
 
-      {/* ── 2. PROBLEM — editorial comparison ── */}
-      <ZeroUnverifiedWritesSection />
+      {/* ═══════════════════════════════════════════════════
+          2. THE STRUCTURAL FLAW — failure vs. trust boundary
+          Left: rose failure atmosphere. Right: emerald proof field.
+          These make the two-track comparison feel environmental.
+      ═══════════════════════════════════════════════════ */}
+      <section id="section-detect" className="relative section-env flex flex-col justify-center py-4 lg:py-6 mt-8">
+        {/* Rose: the unverified / failure side */}
+        <div className="atm-failure-field" aria-hidden="true" />
+        {/* Emerald: the verified / proof side */}
+        <div className="atm-success-field" aria-hidden="true" />
+        {/* Dense grid — engineering blueprint feel */}
+        <div
+          className="absolute inset-0 bg-grid pointer-events-none -z-10"
+          aria-hidden="true"
+          style={{
+            backgroundSize: "60px 60px",
+            backgroundImage:
+              "linear-gradient(to right, rgba(255,255,255,0.038) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.038) 1px, transparent 1px)",
+            maskImage:
+              "radial-gradient(ellipse 80% 70% at 50% 50%, #000 10%, transparent 100%)",
+            WebkitMaskImage:
+              "radial-gradient(ellipse 80% 70% at 50% 50%, #000 10%, transparent 100%)",
+          }}
+        />
+        <ZeroUnverifiedWritesSection />
+      </section>
 
-      {/* ── 3. HOW IT WORKS — 4 stages ── */}
-      <ArchitectureDataflowSection />
+      {/* ═══════════════════════════════════════════════════
+          3. ARCHITECTURE — technical blueprint
+          Horizontal dataflow channel glow aligned with the rail.
+          Slightly denser grid to communicate engineering depth.
+      ═══════════════════════════════════════════════════ */}
+      <section id="section-analyze" className="relative section-env flex flex-col justify-center py-4 lg:py-6 mt-4">
+        {/* Horizontal dataflow atmosphere — follows the rail */}
+        <div className="atm-dataflow-channel" aria-hidden="true" />
+        {/* Dense horizontal scanline band over the dataflow rail */}
+        <div
+          className="absolute left-0 right-0 pointer-events-none -z-10"
+          aria-hidden="true"
+          style={{
+            top: "45%",
+            height: "2px",
+            background:
+              "linear-gradient(to right, transparent 5%, rgba(16,185,129,0.18) 25%, rgba(16,185,129,0.18) 75%, transparent 95%)",
+          }}
+        />
+        <ArchitectureDataflowSection />
+      </section>
 
-      {/* ── 4. VERIFICATION SHOWCASE — tabbed evidence ── */}
-      <VerificationShowcase />
+      {/* ═══════════════════════════════════════════════════
+          4. VERIFICATION SHOWCASE — proof environment
+          Concentrated verification illumination around the
+          code diff / tabbed evidence panel.
+      ═══════════════════════════════════════════════════ */}
+      <section id="section-verify" className="relative section-env flex flex-col justify-center py-6 lg:py-10 mt-8">
+        <div className="atm-verification" aria-hidden="true" />
+        {/* Subtle diagonal line — inspection precision */}
+        <div
+          className="absolute inset-0 pointer-events-none -z-10 bg-diagonal-line"
+          aria-hidden="true"
+        />
+        <VerificationShowcase />
+      </section>
 
-      {/* ── 5. CRYPTOGRAPHIC ATTESTATION ── */}
-      <section className="py-28 lg:py-44 border-t border-zinc-800/50">
-        <div className="max-w-[1400px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-20">
+      {/* ═══════════════════════════════════════════════════
+          5. CRYPTOGRAPHIC ATTESTATION
+          Right-side focused emerald field behind the JSON block.
+      ═══════════════════════════════════════════════════ */}
+      <section id="section-proof" className="relative section-env flex flex-col justify-center py-6 lg:py-10">
+        <div className="atm-attestation" aria-hidden="true" />
+
+        <div className="max-w-[1600px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-24">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-28 items-start">
 
             {/* Left Column — bare numbered list, no card chrome */}
             <div className="lg:col-span-5 space-y-12">
-              <div className="space-y-5">
+              <div className="space-y-6">
                 <p className="text-xs font-mono uppercase tracking-[0.2em] text-zinc-600 font-semibold">
                   Cryptographic Attestation
                 </p>
@@ -133,7 +221,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Right Column — JSON Attestation Block (actual technical artifact — card appropriate) */}
+            {/* Right Column — JSON Attestation Block */}
             <div className="lg:col-span-7">
               <div className="rounded-xl border border-zinc-800/70 bg-zinc-900/30 font-mono overflow-hidden">
                 <div className="px-7 py-5 bg-zinc-900/50 border-b border-zinc-800/60 flex items-center justify-between">
@@ -178,14 +266,54 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* ── 6. LIVE CONSOLE ── */}
-      <LiveConsoleSection />
+      {/* ═══════════════════════════════════════════════════
+          6. SECURITY ARCHITECTURE BOUNDARIES
+          Asymmetric isolation structure — right-heavy field.
+      ═══════════════════════════════════════════════════ */}
+      <section id="section-patch" className="relative section-env flex flex-col justify-center py-6 lg:py-10 mt-4">
+        <div className="atm-isolation-right" aria-hidden="true" />
+        {/* Dense grid on left side — architecture/blueprint */}
+        <div
+          className="absolute inset-0 pointer-events-none -z-10"
+          aria-hidden="true"
+          style={{
+            backgroundSize: "80px 80px",
+            backgroundImage:
+              "linear-gradient(to right, rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.04) 1px, transparent 1px)",
+            maskImage:
+              "radial-gradient(ellipse 55% 65% at 20% 50%, #000 10%, transparent 100%)",
+            WebkitMaskImage:
+              "radial-gradient(ellipse 55% 65% at 20% 50%, #000 10%, transparent 100%)",
+          }}
+        />
+        <SecurityArchitectureSection />
+      </section>
 
-      {/* ── 7. FAQ ── */}
-      <section className="py-28 lg:py-40 border-t border-zinc-800/50">
-        <div className="max-w-[1000px] mx-auto px-6 sm:px-10 lg:px-16">
+      {/* ═══════════════════════════════════════════════════
+          7. LIVE CONSOLE — command-center environment
+          Overhead radial field + subtle vertical scan columns.
+      ═══════════════════════════════════════════════════ */}
+      <section id="section-write" className="relative section-env flex flex-col justify-center py-6 lg:py-10 mt-4">
+        <div className="atm-command-center" aria-hidden="true" />
+        {/* Vertical scan columns — terminal / monitoring feel */}
+        <div
+          className="absolute inset-0 pointer-events-none -z-10"
+          aria-hidden="true"
+          style={{
+            background:
+              "repeating-linear-gradient(90deg, transparent, transparent 119px, rgba(255,255,255,0.018) 120px)",
+          }}
+        />
+        <LiveConsoleSection />
+      </section>
+
+      {/* ═══════════════════════════════════════════════════
+          8. FAQ — technical clarification zone
+      ═══════════════════════════════════════════════════ */}
+      <section className="py-20 lg:py-24 border-t border-zinc-800/30 mt-12">
+        <div className="max-w-[1600px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-24">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
-            <div className="lg:col-span-4 space-y-5">
+            <div className="lg:col-span-4 space-y-6">
               <h2
                 className="font-black tracking-tight text-zinc-100 font-sans leading-[0.95]"
                 style={{ fontSize: "clamp(2rem, 3.5vw, 3rem)" }}
@@ -213,38 +341,11 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* ── 8. FINAL CTA ── */}
-      <section className="border-t border-zinc-800/50">
-        <div className="max-w-4xl mx-auto px-6 sm:px-10 lg:px-16 py-48 lg:py-64 text-center space-y-10">
-          <h2
-            className="font-black tracking-tight text-zinc-100 font-sans leading-[0.95]"
-            style={{ fontSize: "clamp(3rem, 6vw, 6rem)" }}
-          >
-            Ready to verify
-            <br />
-            your first patch?
-          </h2>
-          <p className="text-zinc-500 text-base sm:text-xl font-sans max-w-2xl mx-auto leading-relaxed">
-            Install the PatchProof GitHub App. Configure repository policies.
-            Protect your codebase with fail-closed verification.
-          </p>
-          <div className="pt-4 flex flex-wrap justify-center gap-5 font-sans text-base">
-            <a
-              href="#console"
-              id="final-cta-launch-console"
-              className="px-9 py-4 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 font-bold transition-all shadow-lg hover:shadow-xl inline-flex items-center gap-2.5 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none"
-            >
-              Launch Console <ArrowRight className="w-4 h-4" />
-            </a>
-            <Link
-              href="/docs"
-              className="px-7 py-4 rounded-lg bg-zinc-900/60 hover:bg-zinc-800/60 border border-zinc-800 text-zinc-400 hover:text-zinc-200 font-medium transition-colors focus-visible:ring-1 focus-visible:ring-zinc-400 focus-visible:outline-none"
-            >
-              Read Documentation
-            </Link>
-          </div>
-        </div>
-      </section>
+      {/* ═══════════════════════════════════════════════════
+          9. FINAL CTA — quiet dark finish
+          Almost pure black. One subtle concentrated light below.
+      ═══════════════════════════════════════════════════ */}
+      <CTASection />
     </div>
   );
 }

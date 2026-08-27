@@ -148,6 +148,40 @@ class JobEvidenceResponse(BaseModel):
     generated_at: str | None = Field(default=None, description="Evidence creation timestamp")
 
 
+class RepositoryOnboardRequest(BaseModel):
+    repository: str = Field(description="Repository full name (owner/repo)")
+    default_branch: str = Field(default="main", description="Target default branch")
+    installation_id: int | None = Field(default=None, description="GitHub App installation ID")
+    status: str = Field(default="active", description="Repository monitoring status")
+    provider: str = Field(default="github", description="Source code provider")
+    policy: dict[str, Any] | None = Field(default=None, description="Optional initial repository policy")
+
+
+class RemediationTriggerRequest(BaseModel):
+    repository: str = Field(description="Target repository (owner/repo)")
+    commit_sha: str = Field(default="main", description="Base commit SHA or branch to remediate")
+    file: str = Field(default="app.py", description="Relative file path containing finding")
+    start_line: int = Field(default=1, description="Start line of vulnerable code")
+    end_line: int = Field(default=1, description="End line of vulnerable code")
+    rule_id: str = Field(default="python.security.injection", description="Vulnerability scanner rule ID")
+    severity: str = Field(default="HIGH", description="Severity (CRITICAL, HIGH, MEDIUM, LOW)")
+    message: str = Field(default="Security vulnerability detected", description="Finding description")
+    code_snippet: str | None = Field(default=None, description="Vulnerable code context")
+    auto_create_pr: bool = Field(default=True, description="Whether to publish PR if verification succeeds")
+
+
+class RemediationTriggerResponse(BaseModel):
+    job_id: str = Field(description="Remediation job ID")
+    repository: str = Field(description="Target repository")
+    commit_sha: str = Field(description="Target commit SHA")
+    state: str = Field(description="Terminal lifecycle state")
+    verified: bool = Field(description="Whether verification passed")
+    pr: dict[str, Any] | None = Field(default=None, description="Created Pull Request details")
+    evidence: dict[str, Any] | None = Field(default=None, description="Cryptographic evidence bundle")
+    policy: dict[str, Any] | None = Field(default=None, description="Evaluated policy decision")
+    error: str | None = Field(default=None, description="Error message if blocked or failed")
+
+
 def _format_job_status(job: Any, resolved_store: Any) -> JobStatusResponse:
     state_str = getattr(job.state, "value", str(job.state))
 
@@ -459,6 +493,66 @@ def create_app(
             if tenant.can_access_repository(r.get("repository"))
         ]
         return RepositoryListResponse(repositories=repos, total=len(repos))
+
+    @app.post(
+        "/repositories",
+        response_model=RepositorySummary,
+        summary="Onboard and Monitor Repository",
+        description="Onboards a new repository to PatchProof, initializes its policy, and registers it for automated verification.",
+        tags=["Repositories"],
+    )
+    async def onboard_repository_endpoint(
+        req: RepositoryOnboardRequest,
+        tenant: TenantContext = Depends(get_current_tenant),
+    ) -> RepositorySummary:
+        clean_repo = req.repository.strip()
+        if "/" not in clean_repo or len(clean_repo.split("/")) != 2:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Repository must be formatted as 'owner/repo'",
+            )
+        if not tenant.can_access_repository(clean_repo):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Tenant '{tenant.tenant_id}' is not authorized to onboard repository '{clean_repo}'",
+            )
+
+        if resolved_store is None:
+            raise HTTPException(status_code=500, detail="Job store not configured")
+
+        # Onboard repository in store
+        if hasattr(resolved_store, "onboard_repository"):
+            resolved_store.onboard_repository(
+                repository=clean_repo,
+                default_branch=req.default_branch,
+                installation_id=req.installation_id,
+                status=req.status,
+                provider=req.provider,
+            )
+
+        # Initialize policy if provided
+        if req.policy and hasattr(resolved_store, "set_repository_policy"):
+            policy_data = {
+                "repository": clean_repo,
+                "enabled": bool(req.policy.get("enabled", True)),
+                "minimum_severity": str(req.policy.get("minimum_severity", "medium")).strip().lower(),
+                "auto_remediate": bool(req.policy.get("auto_remediate", True)),
+                "auto_create_pr": bool(req.policy.get("auto_create_pr", True)),
+                "target_branches": req.policy.get("target_branches", [req.default_branch, "main"]),
+                "allowed_events": req.policy.get("allowed_events", ["pull_request", "code_scanning_alert", "check_run"]),
+            }
+            resolved_store.set_repository_policy(clean_repo, policy_data)
+
+        return RepositorySummary(
+            repository=clean_repo,
+            installation_status="installed",
+            total_jobs=0,
+            active_jobs=0,
+            verified_prs=0,
+            failed_jobs=0,
+            last_job_id=None,
+            last_activity=None,
+        )
 
     @app.get(
         "/system/status",
@@ -1023,5 +1117,122 @@ def create_app(
             "sha256_digest": result.sha256_digest,
             "error": result.error,
         }
+
+    @app.post(
+        "/remediations/run",
+        response_model=RemediationTriggerResponse,
+        summary="Trigger Direct Finding Remediation",
+        description="Directly ingests a security finding and executes the end-to-end verification pipeline (analysis, AST validation, sandbox execution, regression testing, Ed25519 evidence sealing, and authorized PR creation).",
+        tags=["Remediations"],
+    )
+    async def trigger_remediation_endpoint(
+        req: RemediationTriggerRequest,
+        tenant: TenantContext = Depends(get_current_tenant),
+    ) -> RemediationTriggerResponse:
+        import hashlib
+        from datetime import datetime, timezone
+        from uuid import uuid4
+        from packages.jobs.pipeline_factory import create_concrete_remediation_orchestrator
+        from packages.jobs.state import JobRecord, JobState
+
+        clean_repo = req.repository.strip()
+        if not tenant.can_access_repository(clean_repo):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Tenant '{tenant.tenant_id}' is not authorized to remediate repository '{clean_repo}'",
+            )
+
+        if resolved_store is None:
+            raise HTTPException(status_code=500, detail="Job store not configured")
+
+        delivery_id = f"direct-{uuid4().hex[:12]}"
+        job_id = f"job-{delivery_id}"
+        fingerprint = hashlib.sha256(f"{clean_repo}:{req.file}:{req.start_line}:{req.rule_id}".encode()).hexdigest()[:24]
+
+        # 1. Create and commit durable job record
+        if hasattr(resolved_store, "create_from_webhook"):
+            resolved_store.create_from_webhook(
+                delivery_id=delivery_id,
+                repository=clean_repo,
+                commit_sha=req.commit_sha,
+                event_type="code_scanning_alert",
+                target_branch="main",
+            )
+        elif hasattr(resolved_store, "create"):
+            job = JobRecord(
+                job_id=job_id,
+                delivery_id=delivery_id,
+                repository=clean_repo,
+                commit_sha=req.commit_sha,
+                target_branch="main",
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
+            )
+            job.event_type = "code_scanning_alert"
+            resolved_store.create(job)
+        else:
+            raise HTTPException(status_code=500, detail="Job store creation contract unsupported")
+
+        # 2. Enqueue task asynchronously to Celery worker
+        enqueue_fn = getattr(dispatcher, "enqueue", None)
+        if enqueue_fn is not None:
+            try:
+                enqueue_fn(job_id)
+            except Exception as exc:
+                if hasattr(resolved_store, "record_transition"):
+                    try:
+                        resolved_store.record_transition(
+                            job_id,
+                            JobState.QUEUED.value,
+                            JobState.FAILED.value,
+                            f"Celery enqueue failure: {exc}",
+                        )
+                    except Exception:
+                        pass
+                job_record = resolved_store.get(job_id)
+                if job_record:
+                    job_record.state = JobState.FAILED
+                    job_record.error = f"Enqueue failure: {exc}"
+                    resolved_store.update(job_record)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to queue remediation task: {exc}",
+                )
+        else:
+            try:
+                from packages.jobs.celery_app import remediation_task
+                remediation_task.delay(job_id)
+            except Exception as exc:
+                if hasattr(resolved_store, "record_transition"):
+                    try:
+                        resolved_store.record_transition(
+                            job_id,
+                            JobState.QUEUED.value,
+                            JobState.FAILED.value,
+                            f"Celery enqueue failure: {exc}",
+                        )
+                    except Exception:
+                        pass
+                job_record = resolved_store.get(job_id)
+                if job_record:
+                    job_record.state = JobState.FAILED
+                    job_record.error = f"Enqueue failure: {exc}"
+                    resolved_store.update(job_record)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to queue remediation task: {exc}",
+                )
+
+        return RemediationTriggerResponse(
+            job_id=job_id,
+            repository=clean_repo,
+            commit_sha=req.commit_sha,
+            state="queued",
+            verified=False,
+            pr=None,
+            evidence=None,
+            policy=None,
+            error=None,
+        )
 
     return app

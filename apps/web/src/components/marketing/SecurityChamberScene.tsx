@@ -88,18 +88,18 @@ export function SecurityChamberScene() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
 
     // --- LIGHTING ---
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.55);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
     scene.add(ambientLight);
 
-    const keyLight = new THREE.DirectionalLight(0x34d399, 2.0);
+    const keyLight = new THREE.DirectionalLight(0x34d399, 2.8);
     keyLight.position.set(5, 10, 7);
     scene.add(keyLight);
 
-    const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.8);
+    const rimLight = new THREE.DirectionalLight(0x38bdf8, 1.2);
     rimLight.position.set(-6, -4, -5);
     scene.add(rimLight);
 
-    const patchPointLight = new THREE.PointLight(0x34d399, 2.8, 6.0);
+    const patchPointLight = new THREE.PointLight(0x34d399, 3.6, 6.0);
     scene.add(patchPointLight);
 
     // --- 3D VERIFICATION CHAMBER STRUCTURE ---
@@ -108,21 +108,21 @@ export function SecurityChamberScene() {
 
     // Shared materials (reused across geometry instances)
     const pylonMat = new THREE.MeshStandardMaterial({
-      color: 0x1a1a22,
+      color: 0x24242e,
       metalness: 0.92,
       roughness: 0.18,
     });
     const pylonEdgeMat = new THREE.LineBasicMaterial({
-      color: 0x2e2e3c,
+      color: 0x3a3a4d,
       transparent: true,
-      opacity: 0.75,
+      opacity: 0.9,
     });
     const girderMat = new THREE.MeshStandardMaterial({
-      color: 0x111118,
+      color: 0x1a1a24,
       metalness: 0.95,
       roughness: 0.22,
     });
-    const girderEdgeMat = new THREE.LineBasicMaterial({ color: 0x48485a });
+    const girderEdgeMat = new THREE.LineBasicMaterial({ color: 0x606076 });
 
     // 1. Four Massive Structural Pylons
     const pylonGeo = new THREE.BoxGeometry(0.14, 7.2, 0.14);
@@ -172,16 +172,16 @@ export function SecurityChamberScene() {
       const gGroup = new THREE.Group();
       gGroup.position.set(0, gate.y, 0);
 
-      const deckMat = new THREE.MeshBasicMaterial({ color: 0x0e0e14 });
+      const deckMat = new THREE.MeshBasicMaterial({ color: 0x1a1a24 });
       const deckMesh = new THREE.Mesh(deckGeo, deckMat);
       gGroup.add(deckMesh);
 
       const borderLine = new THREE.LineSegments(
         deckEdgeGeo,
         new THREE.LineBasicMaterial({
-          color: 0x212130,
+          color: 0x2d2d42,
           transparent: true,
-          opacity: 0.8,
+          opacity: 1.0,
         })
       );
       gGroup.add(borderLine);
@@ -251,18 +251,18 @@ export function SecurityChamberScene() {
     const patchGroup = new THREE.Group();
     chamberGroup.add(patchGroup);
 
-    const patchCoreGeo = new THREE.OctahedronGeometry(0.42, 0);
+    const patchCoreGeo = new THREE.OctahedronGeometry(0.50, 0);
     const patchCoreMat = new THREE.MeshStandardMaterial({
       color: 0x34d399,
       emissive: 0x059669,
-      emissiveIntensity: 1.3,
+      emissiveIntensity: 1.8,
       roughness: 0.06,
       metalness: 0.88,
     });
     const patchCore = new THREE.Mesh(patchCoreGeo, patchCoreMat);
     patchGroup.add(patchCore);
 
-    const ringGeo = new THREE.TorusGeometry(0.60, 0.022, 10, 32);
+    const ringGeo = new THREE.TorusGeometry(0.72, 0.026, 10, 32);
     const ringMat = new THREE.MeshBasicMaterial({ color: 0x6ee7b7 });
     const ring1 = new THREE.Mesh(ringGeo, ringMat);
     patchGroup.add(ring1);
@@ -275,7 +275,7 @@ export function SecurityChamberScene() {
     // Represents "AUTHORIZED WRITE" — only lit green in verified mode
     const destGeo = new THREE.BoxGeometry(3.6, 0.04, 2.0);
     const destMat = new THREE.MeshStandardMaterial({
-      color: 0x064e3b,
+      color: 0x087055,
       emissive: 0x059669,
       emissiveIntensity: 0.0,
       roughness: 0.3,
@@ -285,7 +285,7 @@ export function SecurityChamberScene() {
     destMesh.position.set(0, endY + 0.6, 0);
     const destEdges = new THREE.LineSegments(
       new THREE.EdgesGeometry(destGeo),
-      new THREE.LineBasicMaterial({ color: 0x065f46, transparent: true, opacity: 0.0 })
+      new THREE.LineBasicMaterial({ color: 0x0a9670, transparent: true, opacity: 0.2 })
     );
     destMesh.add(destEdges);
     chamberGroup.add(destMesh);
@@ -341,17 +341,17 @@ export function SecurityChamberScene() {
 
     // --- ANIMATION LOOP ---
     let frameId: number;
-    let tAcc = 0;           // time accumulator — avoids Date.now() every frame
+    let tAcc = 0;           // time accumulator in seconds
     let frameCount = 0;     // for every-other-frame optimizations
+    let lastTime = performance.now();
     // startY, endY, failHaltY are declared above (before destMesh)
 
     // Gate Y positions for dwell logic — patch pauses near each gate
     const gateYs = GATES.map((g) => g.y);
 
     // Convert tAcc (0..1 within a cycle) → actual Y with gate dwells
-    // The patch lingers ~12% of cycle time near each gate
     const CYCLE_DURATION = 1.0; // 1 full cycle = startY → endY
-    const DWELL_FRACTION = 0.10; // fraction of cycle spent pausing at each gate
+    const DWELL_FRACTION = 0.08; // fraction of cycle spent pausing at each gate
     const travelFraction = CYCLE_DURATION - GATES.length * DWELL_FRACTION; // ~0.5
 
     function patchYFromT(t: number): number {
@@ -388,11 +388,14 @@ export function SecurityChamberScene() {
       return endY;
     }
 
-    const animate = () => {
+    const animate = (time?: number) => {
       frameId = requestAnimationFrame(animate);
       frameCount++;
 
-      tAcc += 0.016; // ~60fps tick
+      const now = time || performance.now();
+      const dt = Math.min((now - lastTime) / 1000, 0.05); // cap dt to avoid huge jumps
+      lastTime = now;
+      tAcc += dt;
 
       // Smooth Camera Parallax Orbit
       const targetCamX = initialCamPos.x + mouseX;
@@ -424,9 +427,8 @@ export function SecurityChamberScene() {
         const curMode = modeRef.current;
 
         if (curMode === "verified") {
-          // Patch travels at 0.003/tick — full cycle in ~5.5s at 60fps
-          // (tAcc increments by 0.016 in the outer block)
-          const cycleT = (tAcc * 0.003 * 3) % 1.0;
+          // Target ~4.5 seconds for complete top-to-bottom cycle
+          const cycleT = (tAcc / 4.5) % 1.0;
           const curY = patchYFromT(cycleT);
           const isAtDestination = curY <= endY + 1.0;
 
@@ -446,8 +448,8 @@ export function SecurityChamberScene() {
           (barrierLattice.material as THREE.LineBasicMaterial).opacity = 0.0;
 
           // Destination marker — lights up green when patch arrives
-          destMat.emissiveIntensity = isAtDestination ? 0.6 : 0.0;
-          (destEdges.material as THREE.LineBasicMaterial).opacity = isAtDestination ? 0.8 : 0.0;
+          destMat.emissiveIntensity = isAtDestination ? 1.2 : 0.0;
+          (destEdges.material as THREE.LineBasicMaterial).opacity = isAtDestination ? 1.0 : 0.2;
 
           gateObjects.forEach((go) => {
             const hasPassed = curY <= go.y;
@@ -455,23 +457,23 @@ export function SecurityChamberScene() {
 
             if (hasPassed) {
               (go.aperture.material as THREE.MeshStandardMaterial).emissive.setHex(0x059669);
-              (go.aperture.material as THREE.MeshStandardMaterial).emissiveIntensity = isNear ? 2.4 : 0.9;
+              (go.aperture.material as THREE.MeshStandardMaterial).emissiveIntensity = isNear ? 3.5 : 1.2;
               (go.border.material as THREE.LineBasicMaterial).color.setHex(0x34d399);
-              go.glowLight.intensity = isNear ? 2.5 : 0.5;
+              go.glowLight.intensity = isNear ? 3.8 : 0.8;
               go.glowLight.color.setHex(0x34d399);
             } else {
               (go.aperture.material as THREE.MeshStandardMaterial).emissive.setHex(0x09090b);
-              (go.aperture.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.08;
-              (go.border.material as THREE.LineBasicMaterial).color.setHex(0x141420);
+              (go.aperture.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.15;
+              (go.border.material as THREE.LineBasicMaterial).color.setHex(0x2d2d42);
               go.glowLight.intensity = 0.0;
             }
           });
         } else {
           // Unsafe Blocked Mode — enters, passes 2 gates, halts at gate 3
-          // Cycle: 0→halt, pause, reset, repeat
-          const blockedCycleDuration = 1.6;
-          const blockedT = (tAcc * 0.003 * 3) % blockedCycleDuration;
-          const entryFraction = 0.5; // first half = travelling
+          // Maintain proportional speed (4.5s full cycle equivalent)
+          const blockedCycleDuration = 1.0; 
+          const blockedT = (tAcc / 4.5) % blockedCycleDuration;
+          const entryFraction = 0.45; // slightly faster travel
           let curY: number;
           let isAtBarrier = false;
 
@@ -510,35 +512,37 @@ export function SecurityChamberScene() {
 
           gateObjects.forEach((go, idx) => {
             const hasPassed = curY <= go.y;
+            const isNear = Math.abs(curY - go.y) < 0.6;
             if (idx < 2) {
               if (hasPassed) {
                 (go.aperture.material as THREE.MeshStandardMaterial).emissive.setHex(0x059669);
-                (go.aperture.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.7;
+                (go.aperture.material as THREE.MeshStandardMaterial).emissiveIntensity = isNear ? 3.5 : 1.2;
                 (go.border.material as THREE.LineBasicMaterial).color.setHex(0x34d399);
-                go.glowLight.intensity = 0.5;
+                go.glowLight.intensity = isNear ? 3.8 : 0.8;
                 go.glowLight.color.setHex(0x34d399);
               } else {
                 (go.aperture.material as THREE.MeshStandardMaterial).emissive.setHex(0x09090b);
-                (go.aperture.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.08;
-                (go.border.material as THREE.LineBasicMaterial).color.setHex(0x141420);
+                (go.aperture.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.15;
+                (go.border.material as THREE.LineBasicMaterial).color.setHex(0x2d2d42);
                 go.glowLight.intensity = 0.0;
               }
             } else if (idx === 2) {
               if (isAtBarrier) {
                 (go.aperture.material as THREE.MeshStandardMaterial).emissive.setHex(0xb91c1c);
-                (go.aperture.material as THREE.MeshStandardMaterial).emissiveIntensity = 2.4;
+                (go.aperture.material as THREE.MeshStandardMaterial).emissiveIntensity = 3.5;
                 (go.border.material as THREE.LineBasicMaterial).color.setHex(0xf87171);
-                go.glowLight.intensity = 2.6;
+                go.glowLight.intensity = 3.8;
                 go.glowLight.color.setHex(0xf87171);
               } else {
                 (go.aperture.material as THREE.MeshStandardMaterial).emissive.setHex(0x09090b);
-                (go.aperture.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.08;
-                (go.border.material as THREE.LineBasicMaterial).color.setHex(0x141420);
+                (go.aperture.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.15;
+                (go.border.material as THREE.LineBasicMaterial).color.setHex(0x2d2d42);
                 go.glowLight.intensity = 0.0;
               }
             } else {
               (go.aperture.material as THREE.MeshStandardMaterial).emissive.setHex(0x09090b);
-              (go.border.material as THREE.LineBasicMaterial).color.setHex(0x141420);
+              (go.aperture.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.15;
+              (go.border.material as THREE.LineBasicMaterial).color.setHex(0x2d2d42);
               go.glowLight.intensity = 0.0;
             }
           });
@@ -660,7 +664,7 @@ export function SecurityChamberScene() {
       <div className="absolute inset-0 z-10 pointer-events-none font-mono select-none hidden lg:block">
         {/* PATCH ENTRY — top */}
         <div className="absolute left-4" style={{ top: "5%" }}>
-          <span className="text-[10px] uppercase tracking-[0.18em] text-zinc-700">PATCH</span>
+          <span className="text-[10px] uppercase tracking-[0.18em] font-bold text-zinc-400">PATCH</span>
         </div>
 
         {/* Gate labels — proportionally positioned to match 3D geometry */}
@@ -671,8 +675,8 @@ export function SecurityChamberScene() {
           const isFailGate = mode === "blocked" && i === 2;
           return (
             <div key={gate.id} className="absolute left-4" style={{ top: `${pct}%` }}>
-              <span className={`text-[10px] uppercase tracking-[0.18em] ${
-                isFailGate ? "text-rose-500/80" : "text-zinc-700"
+              <span className={`text-[10px] uppercase tracking-[0.18em] font-bold ${
+                isFailGate ? "text-rose-400" : "text-zinc-400"
               }`}>
                 {gate.label}
               </span>
@@ -682,8 +686,8 @@ export function SecurityChamberScene() {
 
         {/* AUTH. WRITE — bottom, lights emerald when verified */}
         <div className="absolute left-4" style={{ top: "89%" }}>
-          <span className={`text-[10px] uppercase tracking-[0.18em] transition-colors duration-700 ${
-            mode === "verified" ? "text-emerald-500/70" : "text-zinc-800"
+          <span className={`text-[10px] uppercase tracking-[0.18em] font-bold transition-colors duration-700 ${
+            mode === "verified" ? "text-emerald-400" : "text-zinc-600"
           }`}>
             AUTH. WRITE
           </span>

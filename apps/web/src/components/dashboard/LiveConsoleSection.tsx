@@ -14,11 +14,14 @@ import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { SystemStatusWidget } from "@/components/dashboard/SystemStatusWidget";
 import { ErrorAlert } from "@/components/common/ErrorAlert";
 import { ToastContainer, ToastItem } from "@/components/common/ToastNotification";
-import { Cpu, ShieldCheck, GitPullRequest, Lock, RefreshCw, ArrowRight } from "lucide-react";
+import { Cpu, ShieldCheck, GitPullRequest, Lock, RefreshCw, ArrowRight, Play } from "lucide-react";
+import { TriggerRemediationModal } from "@/components/repositories/TriggerRemediationModal";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 type FilterTab = "all" | "active" | "verified" | "pr_created" | "failed";
 
 export function LiveConsoleSection() {
+  const { ref, isRevealed } = useScrollReveal({ threshold: 0.1 });
   const [jobs, setJobs] = useState<JobStatusResponse[]>([]);
   const [systemStatus, setSystemStatus] = useState<SystemStatusResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -26,6 +29,7 @@ export function LiveConsoleSection() {
   const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
   const [sseConnected, setSseConnected] = useState<boolean | null>(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const [isTriggerModalOpen, setIsTriggerModalOpen] = useState(false);
   const seenToastKeys = React.useRef<Set<string>>(new Set());
 
   const addToast = useCallback((toast: Omit<ToastItem, "id">) => {
@@ -185,13 +189,14 @@ export function LiveConsoleSection() {
   }, [jobs, activeFilter]);
 
   return (
-    <section id="console" className="max-w-[1520px] mx-auto px-4 sm:px-8 lg:px-12 py-28 lg:py-40 border-t border-border-muted">
+    <div id="console" ref={ref} className="w-full py-16 lg:py-20 overflow-hidden">
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+      <TriggerRemediationModal isOpen={isTriggerModalOpen} onClose={() => setIsTriggerModalOpen(false)} />
 
-      <div className="space-y-10 font-mono text-xs sm:text-sm">
+      <div className={`max-w-[1600px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-24 space-y-10 font-mono text-xs sm:text-sm transition-all duration-1000 ${isRevealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-12"}`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div className="space-y-2">
-            <div className="text-xs sm:text-sm font-mono text-emerald-400 uppercase tracking-wider font-bold">
+            <div className="text-sm font-mono text-emerald-400 uppercase tracking-wider font-bold">
               Live Operations Telemetry
             </div>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-zinc-100 font-sans leading-tight">
@@ -205,6 +210,13 @@ export function LiveConsoleSection() {
               title="Refresh live telemetry"
             >
               <RefreshCw className="w-3.5 h-3.5" /> Refresh
+            </button>
+            <button
+              onClick={() => setIsTriggerModalOpen(true)}
+              className="px-3.5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-xs sm:text-sm font-sans font-bold transition-colors inline-flex items-center gap-1.5 shadow-sm focus-visible:ring-1 focus-visible:ring-emerald-400 focus-visible:outline-none"
+              data-testid="run-remediation-console-btn"
+            >
+              <Play className="w-3.5 h-3.5 fill-current" /> Run Remediation
             </button>
             <Link
               href="/jobs"
@@ -280,13 +292,13 @@ export function LiveConsoleSection() {
                   <h3 className="text-sm font-semibold text-zinc-100 font-sans">
                     Remediation Jobs Telemetry
                   </h3>
-                  <p className="text-xs text-zinc-400 font-mono">
+                  <p className="text-sm text-zinc-400 font-mono">
                     Showing {filteredJobs.length} of {jobs.length} jobs
                   </p>
                 </div>
 
                 {/* Filter Tabs */}
-                <div className="flex items-center gap-1 font-mono text-xs overflow-x-auto">
+                <div className="flex items-center gap-1 font-mono text-sm overflow-x-auto">
                   <button
                     data-testid="filter-tab-all"
                     onClick={() => setActiveFilter("all")}
@@ -352,6 +364,6 @@ export function LiveConsoleSection() {
           </div>
         )}
       </div>
-    </section>
+    </div>
   );
 }

@@ -86,6 +86,27 @@ class RepositoryPolicyModel(Base):
     )
 
 
+class RepositoryModel(Base):
+    __tablename__ = "repositories"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    repository: Mapped[str] = mapped_column(String(512), unique=True, index=True)
+    owner: Mapped[str] = mapped_column(String(256))
+    name: Mapped[str] = mapped_column(String(256))
+    provider: Mapped[str] = mapped_column(String(64), default="github")
+    default_branch: Mapped[str] = mapped_column(String(256), default="main")
+    installation_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    status: Mapped[str] = mapped_column(String(64), default="active")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+    updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=True,
+    )
+
+
 @dataclass
 class StoredJob:
     job_id: str
@@ -632,10 +653,108 @@ class PostgresJobStore:
                 stmt = stmt.where(JobModel.state == state.lower())
             return session.scalar(stmt) or 0
 
+    def onboard_repository(
+        self,
+        repository: str,
+        default_branch: str = "main",
+        installation_id: int | None = None,
+        status: str = "active",
+        provider: str = "github",
+    ) -> dict[str, Any]:
+        clean_repo = repository.strip()
+        parts = clean_repo.split("/", 1)
+        owner = parts[0] if len(parts) > 1 else ""
+        name = parts[1] if len(parts) > 1 else clean_repo
+
+        with Session(self.engine) as session:
+            existing = session.scalar(select(RepositoryModel).where(RepositoryModel.repository == clean_repo))
+            now = datetime.now(timezone.utc)
+            if existing:
+                existing.default_branch = default_branch
+                if installation_id is not None:
+                    existing.installation_id = installation_id
+                existing.status = status
+                existing.provider = provider
+                existing.updated_at = now
+                session.commit()
+                return {
+                    "id": existing.id,
+                    "repository": existing.repository,
+                    "owner": existing.owner,
+                    "name": existing.name,
+                    "provider": existing.provider,
+                    "default_branch": existing.default_branch,
+                    "installation_id": existing.installation_id,
+                    "status": existing.status,
+                    "created_at": existing.created_at.isoformat() if existing.created_at else None,
+                    "updated_at": existing.updated_at.isoformat() if existing.updated_at else None,
+                }
+            else:
+                new_repo = RepositoryModel(
+                    repository=clean_repo,
+                    owner=owner,
+                    name=name,
+                    provider=provider,
+                    default_branch=default_branch,
+                    installation_id=installation_id,
+                    status=status,
+                    created_at=now,
+                    updated_at=now,
+                )
+                session.add(new_repo)
+                session.commit()
+                return {
+                    "id": new_repo.id,
+                    "repository": new_repo.repository,
+                    "owner": new_repo.owner,
+                    "name": new_repo.name,
+                    "provider": new_repo.provider,
+                    "default_branch": new_repo.default_branch,
+                    "installation_id": new_repo.installation_id,
+                    "status": new_repo.status,
+                    "created_at": new_repo.created_at.isoformat() if new_repo.created_at else None,
+                    "updated_at": new_repo.updated_at.isoformat() if new_repo.updated_at else None,
+                }
+
+    def get_repository(self, repository: str) -> dict[str, Any] | None:
+        clean_repo = repository.strip()
+        with Session(self.engine) as session:
+            repo = session.scalar(select(RepositoryModel).where(RepositoryModel.repository == clean_repo))
+            if not repo:
+                return None
+            return {
+                "id": repo.id,
+                "repository": repo.repository,
+                "owner": repo.owner,
+                "name": repo.name,
+                "provider": repo.provider,
+                "default_branch": repo.default_branch,
+                "installation_id": repo.installation_id,
+                "status": repo.status,
+                "created_at": repo.created_at.isoformat() if repo.created_at else None,
+                "updated_at": repo.updated_at.isoformat() if repo.updated_at else None,
+            }
+
     def list_repositories(self) -> list[dict[str, Any]]:
         with Session(self.engine) as session:
-            jobs = session.scalars(select(JobModel).order_by(JobModel.id.desc())).all()
+            # 1. Fetch registered repositories
+            registered_repos = session.scalars(select(RepositoryModel).order_by(RepositoryModel.id.desc())).all()
             repos: dict[str, dict[str, Any]] = {}
+
+            for reg in registered_repos:
+                repos[reg.repository] = {
+                    "repository": reg.repository,
+                    "installation_status": "installed" if reg.status == "active" else reg.status,
+                    "total_jobs": 0,
+                    "active_jobs": 0,
+                    "verified_prs": 0,
+                    "failed_jobs": 0,
+                    "last_job_id": None,
+                    "last_activity": reg.created_at.isoformat() if reg.created_at else None,
+                }
+
+            # 2. Accumulate metrics from jobs
+            jobs = session.scalars(select(JobModel).order_by(JobModel.id.desc())).all()
             for j in jobs:
                 repo_name = j.repository
                 if not repo_name:

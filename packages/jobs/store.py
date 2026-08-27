@@ -16,7 +16,43 @@ class InMemoryJobStore:
         self._prs = {}
         self._policy_decisions = {}
         self._repo_policies = {}
+        self._repositories = {}
         self._lock = RLock()
+
+    def onboard_repository(
+        self,
+        repository: str,
+        default_branch: str = "main",
+        installation_id: int | None = None,
+        status: str = "active",
+        provider: str = "github",
+    ) -> dict[str, Any]:
+        clean_repo = repository.strip()
+        parts = clean_repo.split("/", 1)
+        owner = parts[0] if len(parts) > 1 else ""
+        name = parts[1] if len(parts) > 1 else clean_repo
+        now = datetime.now(timezone.utc).isoformat()
+
+        with self._lock:
+            record = {
+                "id": len(self._repositories) + 1,
+                "repository": clean_repo,
+                "owner": owner,
+                "name": name,
+                "provider": provider,
+                "default_branch": default_branch,
+                "installation_id": installation_id,
+                "status": status,
+                "created_at": self._repositories.get(clean_repo, {}).get("created_at", now),
+                "updated_at": now,
+            }
+            self._repositories[clean_repo] = record
+            return record
+
+    def get_repository(self, repository: str) -> dict[str, Any] | None:
+        clean_repo = repository.strip()
+        with self._lock:
+            return self._repositories.get(clean_repo)
 
     def set_repository_policy(self, repository: str, policy: dict[str, Any]) -> None:
         with self._lock:
@@ -296,6 +332,21 @@ class InMemoryJobStore:
     def list_repositories(self) -> list[dict[str, Any]]:
         with self._lock:
             repos: dict[str, dict[str, Any]] = {}
+
+            # 1. Registered repositories
+            for repo_name, reg in self._repositories.items():
+                repos[repo_name] = {
+                    "repository": repo_name,
+                    "installation_status": "installed" if reg.get("status") == "active" else reg.get("status", "installed"),
+                    "total_jobs": 0,
+                    "active_jobs": 0,
+                    "verified_prs": 0,
+                    "failed_jobs": 0,
+                    "last_job_id": None,
+                    "last_activity": reg.get("created_at"),
+                }
+
+            # 2. Inferred from jobs
             for job in self._jobs.values():
                 repo_name = getattr(job, "repository", None)
                 if not repo_name:

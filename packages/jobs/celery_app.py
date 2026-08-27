@@ -89,4 +89,24 @@ def remediation_task(self, job_id: str):
     if runtime._orchestrator is None:
         _setup_default_worker_orchestrator()
     from packages.jobs.runtime import get_orchestrator
-    return get_orchestrator().run(job_id)
+    
+    try:
+        return get_orchestrator().run(job_id)
+    except Exception as exc:
+        try:
+            orch = get_orchestrator()
+            store = getattr(orch, "store", None)
+            if store:
+                if hasattr(store, "record_transition"):
+                    try:
+                        store.record_transition(job_id, None, "failed", f"Worker execution crash: {exc}")
+                    except Exception:
+                        pass
+                job = store.get(job_id)
+                if job:
+                    job.state = "failed"
+                    job.error = f"Worker crash: {exc}"
+                    store.update(job)
+        except Exception:
+            pass
+        raise exc

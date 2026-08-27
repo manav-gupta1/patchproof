@@ -8,14 +8,18 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { ErrorAlert } from "@/components/common/ErrorAlert";
 import { RepositoryPolicyModal } from "@/components/repositories/RepositoryPolicyModal";
+import { ConnectRepositoryModal } from "@/components/repositories/ConnectRepositoryModal";
+import { TriggerRemediationModal } from "@/components/repositories/TriggerRemediationModal";
 import { formatRelativeTime } from "@/lib/utils";
-import { RefreshCw, ArrowRight, Settings2 } from "lucide-react";
+import { RefreshCw, ArrowRight, Settings2, Plus, Play } from "lucide-react";
 
 export default function RepositoriesPage() {
   const [repositories, setRepositories] = useState<RepositorySummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedPolicyRepo, setSelectedPolicyRepo] = useState<string | null>(null);
+  const [selectedRemediationRepo, setSelectedRemediationRepo] = useState<string | null>(null);
+  const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
 
   const loadRepositories = async () => {
     setLoading(true);
@@ -35,7 +39,14 @@ export default function RepositoriesPage() {
   }, []);
 
   return (
-    <div className="space-y-5 max-w-6xl mx-auto" data-testid="repositories-page">
+    <div className="space-y-6 max-w-7xl mx-auto" data-testid="repositories-page">
+      {/* Connect Repository Modal */}
+      <ConnectRepositoryModal
+        isOpen={isConnectModalOpen}
+        onClose={() => setIsConnectModalOpen(false)}
+        onConnected={loadRepositories}
+      />
+
       {/* Policy Modal */}
       {selectedPolicyRepo && (
         <RepositoryPolicyModal
@@ -46,8 +57,17 @@ export default function RepositoriesPage() {
         />
       )}
 
+      {/* Trigger Remediation Modal */}
+      {selectedRemediationRepo && (
+        <TriggerRemediationModal
+          repository={selectedRemediationRepo}
+          isOpen={Boolean(selectedRemediationRepo)}
+          onClose={() => setSelectedRemediationRepo(null)}
+        />
+      )}
+
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 border-b border-border-subtle pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4 border-b border-border-subtle pb-4">
         <div>
           <div className="text-[11px] font-mono uppercase tracking-wider text-zinc-500">
             PROTECT / INVENTORY
@@ -59,14 +79,24 @@ export default function RepositoriesPage() {
             Monitored code repositories with active remediation boundaries and automated security policies
           </p>
         </div>
-        <button
-          onClick={loadRepositories}
-          disabled={loading}
-          className="text-xs font-mono text-zinc-400 hover:text-zinc-200 inline-flex items-center gap-1.5 transition-colors self-start sm:self-auto disabled:opacity-50"
-        >
-          <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-3 self-start sm:self-auto">
+          <button
+            onClick={() => setIsConnectModalOpen(true)}
+            id="connect-repository-btn"
+            className="px-3.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-xs font-bold transition-colors inline-flex items-center gap-1.5 shadow-sm"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Connect Repository
+          </button>
+          <button
+            onClick={loadRepositories}
+            disabled={loading}
+            className="text-xs font-mono text-zinc-400 hover:text-zinc-200 inline-flex items-center gap-1.5 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {error && <ErrorAlert message={error} onRetry={loadRepositories} />}
@@ -103,14 +133,24 @@ export default function RepositoriesPage() {
                   </div>
                 </div>
 
-                <button
-                  onClick={() => setSelectedPolicyRepo(repo.repository)}
-                  className="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 rounded text-xs font-mono inline-flex items-center gap-1.5 transition-colors"
-                  data-testid={`edit-policy-${repo.repository}`}
-                >
-                  <Settings2 className="w-3 h-3 text-zinc-400" />
-                  Policy
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setSelectedRemediationRepo(repo.repository)}
+                    className="px-2.5 py-1 bg-emerald-950/80 hover:bg-emerald-900/90 text-emerald-400 hover:text-emerald-300 border border-emerald-800/80 rounded text-xs font-mono inline-flex items-center gap-1.5 transition-colors"
+                    data-testid={`remediate-${repo.repository}`}
+                  >
+                    <Play className="w-3 h-3 text-emerald-400 fill-current" />
+                    Remediate
+                  </button>
+                  <button
+                    onClick={() => setSelectedPolicyRepo(repo.repository)}
+                    className="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 rounded text-xs font-mono inline-flex items-center gap-1.5 transition-colors"
+                    data-testid={`edit-policy-${repo.repository}`}
+                  >
+                    <Settings2 className="w-3 h-3 text-zinc-400" />
+                    Policy
+                  </button>
+                </div>
               </div>
 
               {/* Counts Strip */}

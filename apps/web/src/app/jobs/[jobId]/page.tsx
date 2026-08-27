@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { apiClient } from "@/lib/api";
 import { JobStatusResponse, JobEvidenceResponse, JobStateEvent, JobTerminalEvent } from "@/lib/types";
 import { SafetyOutcomeBanner } from "@/components/jobs/SafetyOutcomeBanner";
+import { VerificationJourneyPipeline } from "@/components/jobs/VerificationJourneyPipeline";
 import { WorkflowProgressStepper } from "@/components/jobs/WorkflowProgressStepper";
 import { LifecycleTimeline } from "@/components/jobs/LifecycleTimeline";
 import { FindingCard } from "@/components/jobs/FindingCard";
@@ -21,10 +22,16 @@ import {
   RefreshCw,
   CheckCircle2,
   XCircle,
+  Clock,
+  Ban,
+  GitBranch,
+  Shield,
+  FileCode2,
 } from "lucide-react";
 import { formatSha } from "@/lib/utils";
 
 type DetailTab = "overview" | "evidence" | "diff" | "sandbox" | "delivery";
+type ConnectionMode = "sse" | "connected" | "reconnecting" | "polling" | "terminal";
 
 export default function JobDetailPage() {
   const params = useParams();
@@ -35,7 +42,7 @@ export default function JobDetailPage() {
   const [evidence, setEvidence] = useState<JobEvidenceResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [connectionMode, setConnectionMode] = useState<"sse" | "polling" | "connected" | "terminal">("sse");
+  const [connectionMode, setConnectionMode] = useState<ConnectionMode>("sse");
   const [activeTab, setActiveTab] = useState<DetailTab>("overview");
 
   const loadJobData = useCallback(async (silent: boolean = false) => {
@@ -65,6 +72,10 @@ export default function JobDetailPage() {
       {
         onOpen: () => {
           setConnectionMode("connected");
+          loadJobData(true);
+        },
+        onReconnecting: () => {
+          setConnectionMode("reconnecting");
         },
         onEvent: (event: JobStateEvent) => {
           setJob((prev) => {
@@ -120,9 +131,120 @@ export default function JobDetailPage() {
     };
   }, [jobId, loadJobData]);
 
+  const state = (job?.state || "queued").toLowerCase();
+  const isVerified = ["verified", "pr_created", "pr_updated", "pr_merged"].includes(state);
+  const isFailed = state === "failed";
+  const isTerminal = ["pr_created", "pr_merged", "pr_closed", "failed", "superseded", "rolled_back"].includes(state);
+  const events = job?.events || [];
+  const errorMsg = (job?.error || "").toLowerCase();
+
+  // Dynamically resolve verification gates based on real telemetry
+  const verificationGates = useMemo(() => {
+    const reachedStates = new Set(events.map((e) => (e.to_state || "").toLowerCase()));
+
+    // 1. AST Syntax Check
+    let astStatus: "passed" | "active" | "failed" | "pending" = "pending";
+    if (isVerified || reachedStates.has("verifying") || reachedStates.has("verified") || reachedStates.has("patching")) {
+      astStatus = "passed";
+    } else if (state === "analyzing" || state === "patching") {
+      astStatus = "active";
+    } else if (isFailed && (errorMsg.includes("ast") || errorMsg.includes("syntax") || errorMsg.includes("patch"))) {
+      astStatus = "failed";
+    }
+
+    // 2. Vulnerability Elimination (Re-scan)
+    let rescanStatus: "passed" | "active" | "failed" | "pending" = "pending";
+    if (isVerified || (evidence?.verification_results?.target_vulnerability_eliminated)) {
+      rescanStatus = "passed";
+    } else if (state === "verifying") {
+      rescanStatus = "active";
+    } else if (isFailed && (errorMsg.includes("rescan") || errorMsg.includes("vulnerability") || errorMsg.includes("finding"))) {
+      rescanStatus = "failed";
+    }
+
+    // 3. gVisor Sandbox Execution
+    let sandboxStatus: "passed" | "active" | "failed" | "pending" = "pending";
+    if (isVerified) {
+      sandboxStatus = "passed";
+    } else if (state === "verifying") {
+      sandboxStatus = "active";
+    } else if (isFailed && (errorMsg.includes("sandbox") || errorMsg.includes("gvisor") || errorMsg.includes("test") || errorMsg.includes("exit code") || reachedStates.has("verifying"))) {
+      sandboxStatus = "failed";
+    }
+
+    // 4. Security Policy
+    let policyStatus: "passed" | "active" | "failed" | "pending" = "pending";
+    if (isVerified || (job?.policy && job.policy.allowed)) {
+      policyStatus = "passed";
+    } else if (job?.policy && !job.policy.allowed) {
+      policyStatus = "failed";
+    } else if (state === "verifying" || state === "scanning") {
+      policyStatus = "active";
+    } else if (isFailed && errorMsg.includes("policy")) {
+      policyStatus = "failed";
+    }
+
+    // 5. Ed25519 Cryptographic Proof
+    let proofStatus: "passed" | "active" | "failed" | "blocked" | "pending" = "pending";
+    if (evidence?.signature || isVerified) {
+      proofStatus = "passed";
+    } else if (state === "verified") {
+      proofStatus = "active";
+    } else if (isFailed) {
+      proofStatus = "blocked";
+    }
+
+    // 6. Safe for GitHub Publication
+    let pubStatus: "passed" | "active" | "blocked" | "pending" = "pending";
+    if (isVerified && (job?.pr_number || ["pr_created", "pr_updated", "pr_merged"].includes(state))) {
+      pubStatus = "passed";
+    } else if (isVerified) {
+      pubStatus = "active";
+    } else if (isFailed) {
+      pubStatus = "blocked";
+    }
+
+    return [
+      {
+        id: "ast",
+        label: "AST syntax validated",
+        status: astStatus,
+      },
+      {
+        id: "rescan",
+        label: "Vulnerability eliminated in re-scan",
+        status: rescanStatus,
+      },
+      {
+        id: "sandbox",
+        label: "gVisor sandbox completed (0 egress)",
+        status: sandboxStatus,
+      },
+      {
+        id: "policy",
+        label: "Security policy passed",
+        status: policyStatus,
+      },
+      {
+        id: "proof",
+        label: "Ed25519 cryptographic proof signed",
+        status: proofStatus,
+      },
+      {
+        id: "pub",
+        label: isVerified
+          ? "Safe for GitHub publication"
+          : isFailed
+          ? "Zero GitHub writes (blocked)"
+          : "Authorized write boundary",
+        status: pubStatus,
+      },
+    ];
+  }, [state, isVerified, isFailed, events, errorMsg, evidence, job]);
+
   if (loading) {
     return (
-      <div className="py-16 max-w-5xl mx-auto">
+      <div className="py-24 max-w-7xl mx-auto">
         <LoadingSpinner label={`Loading remediation job ${jobId}...`} size="lg" />
       </div>
     );
@@ -130,7 +252,7 @@ export default function JobDetailPage() {
 
   if (error || !job) {
     return (
-      <div className="space-y-4 max-w-5xl mx-auto">
+      <div className="space-y-4 max-w-7xl mx-auto">
         <Link
           href="/jobs"
           className="text-xs font-mono text-zinc-400 hover:text-zinc-200 inline-flex items-center gap-1"
@@ -146,42 +268,46 @@ export default function JobDetailPage() {
     );
   }
 
-  const isVerified = ["verified", "pr_created", "pr_updated", "pr_merged"].includes((job.state || "").toLowerCase());
-  const isFailed = (job.state || "").toLowerCase() === "failed";
-  const isTerminal = ["pr_created", "pr_merged", "pr_closed", "failed", "superseded", "rolled_back"].includes(
-    (job.state || "").toLowerCase()
-  );
-
   return (
-    <div className="space-y-5 max-w-5xl mx-auto" data-testid="job-detail-page">
+    <div className="space-y-6 max-w-7xl mx-auto" data-testid="job-detail-page">
       {/* Top Header & Breadcrumb */}
-      <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 border-b border-border-subtle pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border-subtle pb-5">
         <div>
           <Link
             href="/jobs"
-            className="text-xs font-mono text-zinc-400 hover:text-zinc-200 inline-flex items-center gap-1 mb-1.5 transition-colors"
+            className="text-xs font-mono text-zinc-400 hover:text-zinc-200 inline-flex items-center gap-1.5 mb-2 transition-colors"
           >
-            <ArrowLeft className="w-3 h-3" /> Remediations
+            <ArrowLeft className="w-3.5 h-3.5" /> Remediations Control Plane
           </Link>
-          <div className="flex flex-wrap items-center gap-2 text-xs font-mono text-zinc-400">
-            <span className="text-zinc-200 font-medium">{job.repository}</span>
-            <span>·</span>
-            <span>@{formatSha(job.commit_sha, 7)}</span>
-            <span>·</span>
-            <span className="text-zinc-500">ID: {job.job_id}</span>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-xl sm:text-2xl font-bold font-mono text-zinc-100 tracking-tight">
+              {job.repository}
+            </h1>
+            <span className="px-2 py-0.5 rounded bg-surface-300 border border-border-subtle text-xs font-mono text-zinc-300 flex items-center gap-1.5">
+              <GitBranch className="w-3 h-3 text-zinc-400" />
+              @{formatSha(job.commit_sha, 7)}
+            </span>
+            <span className="px-2 py-0.5 rounded bg-surface-300 border border-border-subtle text-xs font-mono text-zinc-400">
+              ID: {job.job_id}
+            </span>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           {!isTerminal && (
-            <span data-testid="sse-status-indicator" className="text-xs font-mono text-zinc-400">
-              {connectionMode === "connected" || connectionMode === "sse" ? (
-                <span className="text-emerald-400 inline-flex items-center gap-1">
+            <span data-testid="sse-status-indicator" className="text-xs font-mono">
+              {connectionMode === "reconnecting" ? (
+                <span className="text-amber-400 inline-flex items-center gap-1.5 font-bold px-2.5 py-1 rounded bg-amber-950/40 border border-amber-800">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+                  RECONNECTING…
+                </span>
+              ) : connectionMode === "connected" || connectionMode === "sse" ? (
+                <span className="text-emerald-400 inline-flex items-center gap-1.5 font-medium px-2.5 py-1 rounded bg-emerald-950/40 border border-emerald-800/80">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   SSE Connected
                 </span>
               ) : (
-                <span className="text-amber-400 inline-flex items-center gap-1">
+                <span className="text-amber-400 inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-950/40 border border-amber-800">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                   Polling
                 </span>
@@ -191,9 +317,9 @@ export default function JobDetailPage() {
 
           <button
             onClick={() => loadJobData(false)}
-            className="text-xs font-mono text-zinc-400 hover:text-zinc-200 inline-flex items-center gap-1 transition-colors"
+            className="text-xs font-mono text-zinc-300 hover:text-zinc-100 bg-surface-300 hover:bg-surface-100 border border-border-subtle px-3 py-1.5 rounded-lg inline-flex items-center gap-1.5 transition-colors shadow-sm"
           >
-            <RefreshCw className="w-3 h-3" /> Refresh
+            <RefreshCw className="w-3.5 h-3.5" /> Refresh Telemetry
           </button>
         </div>
       </div>
@@ -201,70 +327,65 @@ export default function JobDetailPage() {
       {/* 1. Unmistakable Top Security Decision Banner */}
       <SafetyOutcomeBanner job={job} />
 
-      {/* 2. Verification Checklist */}
-      <div className="border border-border-subtle bg-surface-300 rounded-lg p-4 space-y-2.5">
-        <div className="text-[11px] font-mono uppercase tracking-wider text-zinc-500">
-          Verification gates
+      {/* 2. Primary Hero: Connected 6-Stage Verification Journey Pipeline */}
+      <VerificationJourneyPipeline job={job} evidence={evidence} />
+
+      {/* 3. Verification Gates Grid */}
+      <div className="border border-border-subtle bg-surface-200 rounded-xl p-4 sm:p-5 space-y-3">
+        <div className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 font-medium">
+          Automated Verification Gate Checklist
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-xs font-mono">
-          <div className="flex items-center gap-2 text-zinc-300">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            <span>AST syntax validated</span>
-          </div>
-          <div className="flex items-center gap-2 text-zinc-300">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            <span>Vulnerability eliminated in re-scan</span>
-          </div>
-          <div className="flex items-center gap-2 text-zinc-300">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            <span>gVisor sandbox completed (0 egress)</span>
-          </div>
-          <div className="flex items-center gap-2 text-zinc-300">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            <span>Security policy passed</span>
-          </div>
-          <div className="flex items-center gap-2 text-zinc-300">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            <span>Ed25519 cryptographic proof signed</span>
-          </div>
-          <div className="flex items-center gap-2 text-zinc-300">
-            {isVerified ? (
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            ) : isFailed ? (
-              <XCircle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-            ) : (
-              <span className="w-3.5 h-3.5 rounded-full border border-zinc-600 shrink-0" />
-            )}
-            <span>{isVerified ? "Safe for GitHub publication" : isFailed ? "Zero GitHub writes (blocked)" : "Running verification..."}</span>
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs font-mono">
+          {verificationGates.map((gate) => {
+            let icon = <span className="w-3.5 h-3.5 rounded-full border border-zinc-700 shrink-0" />;
+            let textColor = "text-zinc-400";
+
+            if (gate.status === "passed") {
+              icon = <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />;
+              textColor = "text-zinc-200";
+            } else if (gate.status === "failed") {
+              icon = <XCircle className="w-3.5 h-3.5 text-rose-400 shrink-0" />;
+              textColor = "text-rose-300 font-semibold";
+            } else if (gate.status === "active") {
+              icon = <Clock className="w-3.5 h-3.5 text-indigo-400 animate-spin shrink-0" />;
+              textColor = "text-indigo-200";
+            } else if (gate.status === "blocked") {
+              icon = <Ban className="w-3.5 h-3.5 text-zinc-600 shrink-0" />;
+              textColor = "text-zinc-600";
+            }
+
+            return (
+              <div key={gate.id} className={`flex items-center gap-2 ${textColor}`}>
+                {icon}
+                <span className="truncate">{gate.label}</span>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* 3. Workflow Progress Stepper */}
-      <WorkflowProgressStepper job={job} />
-
       {/* 4. Progressive Disclosure Tabs */}
-      <div className="space-y-3 pt-2">
-        <div className="border-b border-border-subtle flex items-center gap-1 overflow-x-auto" role="tablist" aria-label="Workflow inspection tabs">
+      <div className="space-y-4 pt-2">
+        <div className="border-b border-border-subtle flex items-center gap-2 overflow-x-auto" role="tablist" aria-label="Workflow inspection tabs">
           <button
             role="tab"
             aria-selected={activeTab === "overview"}
             onClick={() => setActiveTab("overview")}
-            className={`px-3 py-2 text-xs font-mono transition-colors whitespace-nowrap border-b-2 -mb-px ${
+            className={`px-4 py-2.5 text-xs font-mono transition-colors whitespace-nowrap border-b-2 -mb-px ${
               activeTab === "overview"
-                ? "border-zinc-200 text-zinc-100 font-semibold"
+                ? "border-zinc-200 text-zinc-100 font-bold"
                 : "border-transparent text-zinc-400 hover:text-zinc-200"
             }`}
           >
-            Overview
+            Overview & Telemetry
           </button>
           <button
             role="tab"
             aria-selected={activeTab === "evidence"}
             onClick={() => setActiveTab("evidence")}
-            className={`px-3 py-2 text-xs font-mono transition-colors whitespace-nowrap border-b-2 -mb-px ${
+            className={`px-4 py-2.5 text-xs font-mono transition-colors whitespace-nowrap border-b-2 -mb-px ${
               activeTab === "evidence"
-                ? "border-zinc-200 text-zinc-100 font-semibold"
+                ? "border-zinc-200 text-zinc-100 font-bold"
                 : "border-transparent text-zinc-400 hover:text-zinc-200"
             }`}
           >
@@ -274,9 +395,9 @@ export default function JobDetailPage() {
             role="tab"
             aria-selected={activeTab === "diff"}
             onClick={() => setActiveTab("diff")}
-            className={`px-3 py-2 text-xs font-mono transition-colors whitespace-nowrap border-b-2 -mb-px ${
+            className={`px-4 py-2.5 text-xs font-mono transition-colors whitespace-nowrap border-b-2 -mb-px ${
               activeTab === "diff"
-                ? "border-zinc-200 text-zinc-100 font-semibold"
+                ? "border-zinc-200 text-zinc-100 font-bold"
                 : "border-transparent text-zinc-400 hover:text-zinc-200"
             }`}
           >
@@ -286,9 +407,9 @@ export default function JobDetailPage() {
             role="tab"
             aria-selected={activeTab === "sandbox"}
             onClick={() => setActiveTab("sandbox")}
-            className={`px-3 py-2 text-xs font-mono transition-colors whitespace-nowrap border-b-2 -mb-px ${
+            className={`px-4 py-2.5 text-xs font-mono transition-colors whitespace-nowrap border-b-2 -mb-px ${
               activeTab === "sandbox"
-                ? "border-zinc-200 text-zinc-100 font-semibold"
+                ? "border-zinc-200 text-zinc-100 font-bold"
                 : "border-transparent text-zinc-400 hover:text-zinc-200"
             }`}
           >
@@ -298,9 +419,9 @@ export default function JobDetailPage() {
             role="tab"
             aria-selected={activeTab === "delivery"}
             onClick={() => setActiveTab("delivery")}
-            className={`px-3 py-2 text-xs font-mono transition-colors whitespace-nowrap border-b-2 -mb-px ${
+            className={`px-4 py-2.5 text-xs font-mono transition-colors whitespace-nowrap border-b-2 -mb-px ${
               activeTab === "delivery"
-                ? "border-zinc-200 text-zinc-100 font-semibold"
+                ? "border-zinc-200 text-zinc-100 font-bold"
                 : "border-transparent text-zinc-400 hover:text-zinc-200"
             }`}
           >
@@ -311,8 +432,8 @@ export default function JobDetailPage() {
         {/* Tab Panels */}
         <div>
           {activeTab === "overview" && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 <FindingCard
                   finding={evidence?.target_finding}
                   defaultFingerprint={job.commit_sha}

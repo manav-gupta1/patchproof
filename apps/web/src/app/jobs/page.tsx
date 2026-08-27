@@ -91,7 +91,7 @@ export default function JobsPage() {
   ).length;
 
   return (
-    <div className="space-y-5 max-w-6xl mx-auto" data-testid="jobs-page">
+    <div className="space-y-6 max-w-7xl mx-auto" data-testid="jobs-page">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 border-b border-border-subtle pb-4">
         <div>

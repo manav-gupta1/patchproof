@@ -214,6 +214,31 @@ export interface JobTerminalEvent {
   is_stale?: boolean;
 }
 
+export interface RemediationTriggerRequest {
+  repository: string;
+  commit_sha?: string;
+  file?: string;
+  start_line?: number;
+  end_line?: number;
+  rule_id?: string;
+  severity?: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | string;
+  message?: string;
+  code_snippet?: string;
+  auto_create_pr?: boolean;
+}
+
+export interface RemediationTriggerResponse {
+  job_id: string;
+  repository: string;
+  commit_sha: string;
+  state: JobLifecycleState | string;
+  verified: boolean;
+  pr?: PullRequestInfo | null;
+  evidence?: JobEvidenceResponse | Record<string, any> | null;
+  policy?: PolicyDecision | null;
+  error?: string | null;
+}
+
 export interface JobTransitionEvent {
   job_id: string;
   repository: string;
@@ -225,4 +250,5 @@ export interface JobTransitionEvent {
   pr_url?: string | null;
   created_at?: string | null;
 }
+
 

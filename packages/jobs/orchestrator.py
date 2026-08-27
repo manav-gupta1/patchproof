@@ -92,9 +92,22 @@ class RemediationOrchestrator:
             else:
                 workspace = str(workspace_res)
 
-            # Load and evaluate repository security policy
+            # Load and evaluate repository security policy (store configured policy or workspace .patchproof.yml)
             current_stage = "policy_evaluation"
-            policy = self.policy_loader.load_from_workspace(workspace)
+            import yaml
+            policy = None
+            if hasattr(self.store, "get_repository_policy") and getattr(job, "repository", None):
+                store_policy = self.store.get_repository_policy(job.repository)
+                if store_policy:
+                    if "policy" in store_policy:
+                        policy = self.policy_loader.parse_yaml(yaml.dump(store_policy), source="store")
+                    else:
+                        policy = self.policy_loader.parse_yaml(yaml.dump({"version": "1.0", "policy": store_policy}), source="store")
+            if policy is None or policy.source == "default":
+                workspace_policy = self.policy_loader.load_from_workspace(workspace)
+                if workspace_policy.source != "default" or policy is None:
+                    policy = workspace_policy
+
             target_branch = getattr(job, "target_branch", None)
             event_type = getattr(job, "event_type", None)
 

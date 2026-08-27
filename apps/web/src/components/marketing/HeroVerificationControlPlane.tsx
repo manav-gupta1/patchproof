@@ -31,21 +31,20 @@ export function HeroSection() {
       className="relative min-h-[90vh] flex items-center overflow-hidden select-none"
       aria-label="PatchProof hero"
     >
-      {/* Very subtle radial glow behind 3D */}
-      <div
-        className="absolute right-0 top-0 bottom-0 w-1/2 pointer-events-none"
-        aria-hidden="true"
-        style={{
-          background:
-            "radial-gradient(ellipse 70% 60% at 70% 50%, rgba(52,211,153,0.035) 0%, transparent 70%)",
-        }}
-      />
+      {/*
+        The global machine illumination (emerald field, inspection rings, vertical shaft)
+        is rendered by PageEnvironment via fixed layers.
+        
+        We add the atmospheric depth masks here for the hero.
+      */}
+      <div className="atm-hero-depth" aria-hidden="true" />
+      <div className="atm-hero-machine animate-atm-drift" aria-hidden="true" />
 
-      <div className="relative w-full max-w-[1800px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-20 py-20 lg:py-0">
+      <div className="relative w-full max-w-[1800px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-24 py-20 lg:py-0">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 items-center min-h-[90vh]">
 
           {/* ── LEFT: TYPOGRAPHY — 5 cols ── */}
-          <div className="lg:col-span-5 flex flex-col justify-center space-y-8 lg:space-y-10 py-16 lg:py-24 lg:pr-8">
+          <div className="lg:col-span-5 flex flex-col justify-center space-y-8 lg:space-y-10 py-12 lg:py-16 lg:pr-8">
 
             {/* Eyebrow */}
             <div
@@ -121,12 +120,70 @@ export function HeroSection() {
             </div>
           </div>
 
-          {/* ── RIGHT: 3D VERIFICATION CHAMBER — 7 cols, no card wrapper ── */}
+          {/* ── RIGHT: 3D VERIFICATION CHAMBER WITH INTEGRATED ARCHITECTURAL BUS — 7 cols ── */}
           <div
-            className="lg:col-span-7 flex items-center self-stretch animate-chamber-fade-in"
+            className="lg:col-span-7 flex items-stretch animate-chamber-fade-in relative"
             style={{ animationDelay: "200ms", minHeight: "680px" }}
           >
-            <SecurityChamberScene />
+            {/* Subtle Horizon Floor Grid under the chamber */}
+            <div 
+              className="absolute bottom-0 left-[-10%] right-[-20%] h-[40%] pointer-events-none -z-10"
+              style={{
+                perspective: "1000px",
+                perspectiveOrigin: "50% 10%",
+                maskImage: "radial-gradient(ellipse 60% 80% at 50% 50%, #000 10%, transparent 80%)",
+                WebkitMaskImage: "radial-gradient(ellipse 60% 80% at 50% 50%, #000 10%, transparent 80%)",
+              }}
+            >
+              <div 
+                className="w-full h-full border-t border-emerald-900/40 bg-zinc-950/20"
+                style={{
+                  transform: "rotateX(78deg) translateZ(0)",
+                  backgroundSize: "45px 45px",
+                  backgroundImage: `
+                    linear-gradient(to right, rgba(16, 185, 129, 0.08) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(16, 185, 129, 0.08) 1px, transparent 1px)
+                  `
+                }}
+              />
+            </div>
+            {/* Subtle technical pipeline indicator column */}
+            <div className="hidden xl:flex flex-col justify-between py-12 pr-6 border-r border-zinc-800/40 text-xs font-mono text-zinc-500 space-y-4 select-none shrink-0">
+              <div className="space-y-0.5">
+                <div className="text-zinc-400 font-bold tracking-wider">01 PATCH</div>
+                <div className="text-zinc-600">UNTRUSTED INGEST</div>
+              </div>
+              <div className="text-zinc-700 text-xs">↓</div>
+              <div className="space-y-0.5">
+                <div className="text-zinc-400 font-bold tracking-wider">02 AST</div>
+                <div className="text-zinc-600">TREE-SITTER BOUND</div>
+              </div>
+              <div className="text-zinc-700 text-xs">↓</div>
+              <div className="space-y-0.5">
+                <div className="text-emerald-400 font-bold tracking-wider">03 SANDBOX</div>
+                <div className="text-zinc-600">gVisor 0-EGRESS</div>
+              </div>
+              <div className="text-zinc-700 text-xs">↓</div>
+              <div className="space-y-0.5">
+                <div className="text-zinc-400 font-bold tracking-wider">04 VERIFY</div>
+                <div className="text-zinc-600">TEST & RESCAN</div>
+              </div>
+              <div className="text-zinc-700 text-xs">↓</div>
+              <div className="space-y-0.5">
+                <div className="text-emerald-400 font-bold tracking-wider">05 PROOF</div>
+                <div className="text-zinc-600">ED25519 SEALED</div>
+              </div>
+              <div className="text-zinc-700 text-xs">↓</div>
+              <div className="space-y-0.5">
+                <div className="text-zinc-300 font-bold tracking-wider">06 GITHUB</div>
+                <div className="text-zinc-600">AUTHORIZED WRITE</div>
+              </div>
+            </div>
+
+            {/* 3D Scene */}
+            <div className="flex-1 flex items-center">
+              <SecurityChamberScene />
+            </div>
           </div>
         </div>
       </div>

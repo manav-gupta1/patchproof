@@ -9,6 +9,8 @@ import {
   JobStateEvent,
   JobTerminalEvent,
   JobTransitionEvent,
+  RemediationTriggerRequest,
+  RemediationTriggerResponse,
 } from "./types";
 
 export class ApiError extends Error {
@@ -52,6 +54,7 @@ export interface SseSubscriptionCallbacks {
   onError?: (error: Error) => void;
   onOpen?: () => void;
   onClose?: () => void;
+  onReconnecting?: () => void;
   onFallback?: () => void;
 }
 
@@ -233,6 +236,27 @@ export class PatchProofClient {
 
   async getRepositories(): Promise<RepositoryListResponse> {
     return this.request<RepositoryListResponse>("/repositories");
+  }
+
+  async onboardRepository(payload: {
+    repository: string;
+    default_branch?: string;
+    installation_id?: number;
+    status?: string;
+    provider?: string;
+    policy?: Record<string, any>;
+  }): Promise<any> {
+    return this.request<any>("/repositories", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async triggerRemediation(payload: RemediationTriggerRequest): Promise<RemediationTriggerResponse> {
+    return this.request<RemediationTriggerResponse>("/remediations/run", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
   }
 
   async getSystemStatus(): Promise<SystemStatusResponse> {
@@ -442,6 +466,7 @@ export class PatchProofClient {
 
         retryCount++;
         if (retryCount <= maxRetries) {
+          if (callbacks.onReconnecting) callbacks.onReconnecting();
           const backoffDelay = Math.min(1000 * Math.pow(2, retryCount - 1), 8000);
           reconnectTimeoutId = setTimeout(startStreaming, backoffDelay);
         } else if (fallbackToPolling) {
