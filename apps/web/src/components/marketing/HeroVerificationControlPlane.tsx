@@ -40,7 +40,7 @@ export function HeroSection() {
       <div className="atm-hero-depth" aria-hidden="true" />
       <div className="atm-hero-machine animate-atm-drift" aria-hidden="true" />
 
-      <div className="relative w-full max-w-[1800px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-24 py-20 lg:py-0">
+      <div className="relative w-full max-w-[1800px] mx-auto px-6 sm:px-8 lg:px-12 py-20 lg:py-0">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 items-center min-h-[90vh]">
 
           {/* ── LEFT: TYPOGRAPHY — 5 cols ── */}

@@ -74,7 +74,7 @@ export function SecurityArchitectureSection() {
 
   return (
     <div ref={ref} className="py-12 lg:py-16 w-full overflow-hidden">
-      <div className={`max-w-[1600px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-24 space-y-12 lg:space-y-16 transition-all duration-1000 ${isRevealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-12"}`}>
+      <div className={`max-w-[1600px] mx-auto px-6 sm:px-8 lg:px-12 space-y-12 lg:space-y-16 transition-all duration-1000 ${isRevealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-12"}`}>
 
         {/* ── SECTION HEADER ── */}
         <div className="max-w-3xl space-y-6">

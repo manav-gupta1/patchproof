@@ -10,7 +10,6 @@ import { LiveConsoleSection } from "@/components/dashboard/LiveConsoleSection";
 import { FAQAccordion } from "@/components/marketing/FAQAccordion";
 import { CTASection } from "@/components/marketing/CTASection";
 import { PageEnvironment } from "@/components/background/PageEnvironment";
-import { ScrollProgressRail } from "@/components/background/ScrollProgressRail";
 import { ArrowRight, KeyRound } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -70,7 +69,6 @@ export default function DashboardPage() {
         ══════════════════════════════════════════════════════
       */}
       <PageEnvironment />
-      <ScrollProgressRail />
 
       {/* ══ NOISE TEXTURE — applied to page root ══ */}
       {/* SVG feTurbulence grain: 2.5% monochromatic noise to break up flat dark surfaces */}
@@ -122,18 +120,7 @@ export default function DashboardPage() {
       ═══════════════════════════════════════════════════ */}
       <section id="section-analyze" className="relative section-env flex flex-col justify-center py-4 lg:py-6 mt-4">
         {/* Horizontal dataflow atmosphere — follows the rail */}
-        <div className="atm-dataflow-channel" aria-hidden="true" />
         {/* Dense horizontal scanline band over the dataflow rail */}
-        <div
-          className="absolute left-0 right-0 pointer-events-none -z-10"
-          aria-hidden="true"
-          style={{
-            top: "45%",
-            height: "2px",
-            background:
-              "linear-gradient(to right, transparent 5%, rgba(16,185,129,0.18) 25%, rgba(16,185,129,0.18) 75%, transparent 95%)",
-          }}
-        />
         <ArchitectureDataflowSection />
       </section>
 
@@ -159,7 +146,7 @@ export default function DashboardPage() {
       <section id="section-proof" className="relative section-env flex flex-col justify-center py-6 lg:py-10">
         <div className="atm-attestation" aria-hidden="true" />
 
-        <div className="max-w-[1600px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-24">
+        <div className="max-w-[1600px] mx-auto px-6 sm:px-8 lg:px-12">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-28 items-start">
 
             {/* Left Column — bare numbered list, no card chrome */}
@@ -311,7 +298,7 @@ export default function DashboardPage() {
           8. FAQ — technical clarification zone
       ═══════════════════════════════════════════════════ */}
       <section className="py-20 lg:py-24 border-t border-zinc-800/30 mt-12">
-        <div className="max-w-[1600px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-24">
+        <div className="max-w-[1600px] mx-auto px-6 sm:px-8 lg:px-12">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
             <div className="lg:col-span-4 space-y-6">
               <h2

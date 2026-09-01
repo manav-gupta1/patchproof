@@ -27,7 +27,7 @@ export function VerificationShowcase() {
 
   return (
     <div ref={ref} className="py-16 lg:py-20 w-full overflow-hidden">
-      <div className={`max-w-[1600px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-24 transition-all duration-1000 ${isRevealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-12"}`}>
+      <div className={`max-w-[1600px] mx-auto px-6 sm:px-8 lg:px-12 transition-all duration-1000 ${isRevealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-12"}`}>
 
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-16 xl:gap-24 items-center">
           

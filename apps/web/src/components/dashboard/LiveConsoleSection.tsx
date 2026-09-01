@@ -193,7 +193,7 @@ export function LiveConsoleSection() {
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       <TriggerRemediationModal isOpen={isTriggerModalOpen} onClose={() => setIsTriggerModalOpen(false)} />
 
-      <div className={`max-w-[1600px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-24 space-y-10 font-mono text-xs sm:text-sm transition-all duration-1000 ${isRevealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-12"}`}>
+      <div className={`max-w-[1600px] mx-auto px-6 sm:px-8 lg:px-12 space-y-10 font-mono text-xs sm:text-sm transition-all duration-1000 ${isRevealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-12"}`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="text-sm font-mono text-emerald-400 uppercase tracking-wider font-bold">
